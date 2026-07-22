@@ -1,21 +1,28 @@
 <?php
 require_once 'conexao.php';
 
-// Recebe os dados enviados pelo JavaScript
-$dados = json_decode(file_get_contents("php://input"), true);
+header('Content-Type: application/json');
 
-if (isset($dados['id']) && isset($dados['status'])) {
-    $id = $dados['id'];
-    $status = $dados['status']; // Será 'Pago' ou 'Pendente'
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+    $status = isset($_POST['status']) ? $_POST['status'] : '';
 
-    try {
-        $stmt = $pdo->prepare("UPDATE gastos SET status = :status WHERE id = :id");
-        $stmt->execute([':status' => $status, ':id' => $id]);
-        
-        // Responde para o JavaScript que deu certo
-        echo json_encode(['sucesso' => true]);
-    } catch (PDOException $e) {
-        echo json_encode(['sucesso' => false, 'erro' => $e->getMessage()]);
+    if ($id > 0 && in_array($status, ['Pago', 'Pendente'])) {
+        try {
+            $stmt = $pdo->prepare("UPDATE gastos SET status = :status WHERE id = :id");
+            $stmt->execute([
+                ':status' => $status,
+                ':id' => $id
+            ]);
+
+            echo json_encode(['success' => true]);
+            exit;
+        } catch (PDOException $e) {
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+            exit;
+        }
     }
 }
-?>
+
+echo json_encode(['success' => false, 'error' => 'Parâmetros inválidos']);
+exit;
